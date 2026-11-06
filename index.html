@@ -82,6 +82,7 @@
     .toolbar #progress { grid-column: 1 / -1; text-align: center; }
     .toolbar #progress:empty { display: none; }
     .toolbar button { padding: 11px 8px; }
+    .toolbar #dlBySize { grid-column: 1 / -1; }
     .row { grid-template-columns: 1fr 1fr; padding: 10px 12px 12px; gap: 10px; }
     .row .no { grid-column: 1 / -1; grid-row: auto; text-align: left; font-size: 14px; }
     .row .no::after { content: "件目"; font-size: 12px; margin-left: 2px; }
@@ -115,13 +116,14 @@
       <span class="grow"></span>
       <span id="progress"></span>
       <button id="dlEach">1件ずつPDFで保存</button>
+      <button class="primary" id="dlBySize">用紙ごとに1つのPDFで保存</button>
       <button class="primary" id="dlZip">まとめてZIPで保存</button>
     </div>
 
     <div id="rows"></div>
 
     <p class="note">
-      ・1行＝1つのPDFになります。「枚数」の数だけ同じページが入ります（両面ではなく、そのまま印刷すれば枚数分出ます）。<br>
+      ・1行＝1つのPDFになります。「用紙ごとに1つのPDFで保存」は、同じ用紙サイズの行を上から順に1つのPDFにまとめます（A4とハガキが混ざっていれば2つのPDFになります）。「枚数」の数だけ同じページが入ります（両面ではなく、そのまま印刷すれば枚数分出ます）。<br>
       ・タイトルが長いときは、まず文字の横幅を細くし（最大80%）、それでも入らなければ文字サイズを小さくして枠内に収めます。<br>
       ・入力内容はこのブラウザに自動で保存されます。<br>
       ・英数字は端末に入っている Impact を使います。Impact がない端末（スマホなど）では似た書体（Anton）で代用します。
@@ -285,20 +287,25 @@ function renderCert(data, dpi) {
 }
 
 // ===== PDF =====
-function makePdf(data) {
-  const paper = PAPERS[data.size] || PAPERS.a4;
-  const canvas = renderCert(data, OUTPUT_DPI);
-  const img = canvas.toDataURL("image/jpeg", 0.93);
+const copiesOf = d => Math.max(1, Math.min(200, parseInt(d.copies, 10) || 1));
+// list: 同じ用紙サイズの行の配列。行の順に、それぞれの枚数分のページを並べた1つのPDFにする
+function makePdfMulti(list) {
+  const paper = PAPERS[list[0].size] || PAPERS.a4;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "pt", format: [paper.w, paper.h], orientation: "portrait", compress: true });
-  const n = Math.max(1, Math.min(200, parseInt(data.copies, 10) || 1));
-  for (let i = 0; i < n; i++) {
-    if (i > 0) doc.addPage([paper.w, paper.h], "portrait");
-    doc.addImage(img, "JPEG", 0, 0, paper.w, paper.h, "cert", "NONE"); // 同じ画像は1回だけ埋め込まれる
-  }
-  doc.setProperties({ title: `${data.sub} ${data.title}` });
+  let first = true;
+  list.forEach((data, k) => {
+    const img = renderCert(data, OUTPUT_DPI).toDataURL("image/jpeg", 0.93);
+    for (let i = 0; i < copiesOf(data); i++) {
+      if (!first) doc.addPage([paper.w, paper.h], "portrait");
+      first = false;
+      doc.addImage(img, "JPEG", 0, 0, paper.w, paper.h, "cert" + k, "NONE"); // 同じ画像は1回だけ埋め込まれる
+    }
+  });
+  doc.setProperties({ title: list.length === 1 ? `${list[0].sub} ${list[0].title}` : `記録証 ${paper.label}` });
   return doc.output("blob");
 }
+const makePdf = data => makePdfMulti([data]);
 function fileName(d, i) {
   const clean = s => String(s || "").replace(/[\\/:*?"<>|\s!！]+/g, "_").replace(/^_+|_+$/g, "");
   const parts = [String(i + 1).padStart(2, "0"), d.vol ? `VOL${clean(d.vol)}` : "", clean(d.sub), clean(d.title), `${PAPERS[d.size].label}x${d.copies || 1}`].filter(Boolean);
@@ -428,6 +435,26 @@ document.getElementById("dlEach").addEventListener("click", async e => {
   e.target.disabled = true;
   try { await buildAll(async (blob, name) => { saveBlob(blob, name); await new Promise(r => setTimeout(r, 600)); }); }
   finally { e.target.disabled = false; }
+});
+document.getElementById("dlBySize").addEventListener("click", async e => {
+  e.target.disabled = true;
+  try {
+    await ready;
+    const groups = {};
+    rows.forEach(r => (groups[r.size in PAPERS ? r.size : "a4"] ||= []).push(r));
+    const keys = Object.keys(PAPERS).filter(k => groups[k]);
+    const d = (rows[0]?.date || today()).replace(/-/g, "");
+    for (let g = 0; g < keys.length; g++) {
+      const list = groups[keys[g]];
+      const pages = list.reduce((n, r) => n + copiesOf(r), 0);
+      progressEl.textContent = `作成中… ${PAPERS[keys[g]].label}（${pages}ページ）`;
+      await new Promise(r => setTimeout(r, 30));
+      saveBlob(makePdfMulti(list), `記録証_${d}_${PAPERS[keys[g]].label}_${list.length}件_${pages}枚.pdf`);
+      await new Promise(r => setTimeout(r, 600));
+    }
+    progressEl.textContent = "完了しました";
+    setTimeout(() => progressEl.textContent = "", 3000);
+  } finally { e.target.disabled = false; }
 });
 
 renderRows();
