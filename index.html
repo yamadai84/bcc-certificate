@@ -82,7 +82,12 @@
     .toolbar #progress { grid-column: 1 / -1; text-align: center; }
     .toolbar #progress:empty { display: none; }
     .toolbar button { padding: 11px 8px; }
-    .toolbar #dlBySize { grid-column: 1 / -1; }
+    /* 保存ボタン3つは同じ大きさで縦に並べる */
+    .toolbar #dlBySize, .toolbar #dlZip, .toolbar #dlEach { grid-column: 1 / -1; padding: 13px 8px; font-size: 14px; }
+    .toolbar #dlBySize { order: 1; }
+    .toolbar #dlZip { order: 2; }
+    .toolbar #dlEach { order: 3; }
+    .toolbar #progress { order: 4; }
     .row { grid-template-columns: 1fr 1fr; padding: 10px 12px 12px; gap: 10px; }
     .row .no { grid-column: 1 / -1; grid-row: auto; text-align: left; font-size: 14px; }
     .row .no::after { content: "件目"; font-size: 12px; margin-left: 2px; }
