@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BCC 記録証メーカー</title>
+<title>Be Color コンテスト 記録証メーカー</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="apple-touch-icon" href="assets/logo.png">
 <meta name="robots" content="noindex">
 <style>
   @font-face { font-family: "CorporateLogoBold"; src: url("fonts/Corporate-Logo-Bold-ver3.woff2") format("woff2"); font-display: block; }
@@ -14,18 +16,19 @@
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 14px; }
-  header { background: var(--green); color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
-  header h1 { margin: 0; font-size: 18px; font-family: "CorporateLogoBold", sans-serif; letter-spacing: .04em; }
-  header .font-status { margin-left: auto; font-size: 12px; opacity: .85; }
-  @media (max-width: 600px) { header { flex-wrap: wrap; } header .font-status { margin-left: 0; width: 100%; } }
+  header { background: #fff; border-bottom: 4px solid var(--green); padding: 10px 20px; display: flex; align-items: center; gap: 14px; }
+  header img { height: 60px; width: auto; display: block; }
+  header h1 { margin: 0; font-size: 22px; line-height: 1.2; color: var(--green); font-family: "CorporateLogoBold", sans-serif; letter-spacing: .04em; font-weight: normal; }
+  header h1 small { display: block; font-size: 14px; color: var(--ink); letter-spacing: .1em; }
+  header .font-status { margin-left: auto; font-size: 11px; color: var(--sub); text-align: right; }
   main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
   @media (max-width: 960px) { main { grid-template-columns: 1fr; padding: 12px 16px; } .preview { position: static !important; } }
 
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
   .toolbar .grow { flex: 1; }
   .bulk { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px;
-    display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-  .bulk .ttl { width: 100%; font-weight: 700; font-size: 12px; color: var(--sub); }
+    display: grid; grid-template-columns: 100px 170px 130px 90px; gap: 10px; align-items: end; }
+  .bulk .ttl { grid-column: 1 / -1; font-weight: 700; font-size: 12px; color: var(--sub); }
 
   .row { background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
     display: grid; grid-template-columns: 28px 1.4fr 1fr 80px 140px 110px 70px; gap: 10px; align-items: end; }
@@ -37,6 +40,9 @@
 
   label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--sub); font-weight: 600; min-width: 0; }
   input, select { font: inherit; font-size: 15px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); width: 100%; min-width: 0; }
+  input, select { min-height: 42px; }
+  input[type="date"] { -webkit-appearance: none; appearance: none; display: block; text-align: left; }
+  input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   input:focus, select:focus { outline: 2px solid var(--green); outline-offset: -1px; border-color: transparent; }
   .vol-wrap { position: relative; }
   .vol-wrap span { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--sub); font-size: 12px; pointer-events: none; }
@@ -56,11 +62,40 @@
   .preview .meta { margin-top: 8px; font-size: 12px; color: var(--sub); }
   .note { font-size: 12px; color: var(--sub); line-height: 1.7; margin-top: 16px; }
   #progress { font-size: 12px; color: var(--green); font-weight: 700; }
+
+  /* ===== スマホ ===== */
+  @media (max-width: 640px) {
+    header { padding: 8px 16px; gap: 10px; }
+    header img { height: 48px; }
+    header h1 { font-size: 18px; }
+    header h1 small { font-size: 12px; }
+    header .font-status { display: none; }
+    main { padding: 12px 16px; gap: 14px; }
+    .preview { order: -1; padding: 10px; }
+    .preview canvas { max-width: 190px; margin: 0 auto; }
+    .preview .meta, .preview h2 { text-align: center; }
+    input, select { font-size: 16px; } /* iPhoneで入力時に拡大されないように */
+    .bulk { grid-template-columns: 1fr 1fr; }
+    .toolbar { display: grid; grid-template-columns: 1fr 1fr; }
+    .toolbar .grow { display: none; }
+    .toolbar #rowCount { text-align: right; }
+    .toolbar #progress { grid-column: 1 / -1; text-align: center; }
+    .toolbar #progress:empty { display: none; }
+    .toolbar button { padding: 11px 8px; }
+    .row { grid-template-columns: 1fr 1fr; padding: 10px 12px 12px; gap: 10px; }
+    .row .no { grid-column: 1 / -1; grid-row: auto; text-align: left; font-size: 14px; }
+    .row .no::after { content: "件目"; font-size: 12px; margin-left: 2px; }
+    .row .f-wide { grid-column: 1 / -1; }
+    .row .actions { grid-column: 1 / -1; }
+    .row .actions button { padding: 9px 12px; }
+    .row .fitnote { width: 100%; margin-left: 0; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>BCC 記録証メーカー</h1>
+  <img src="assets/logo.png" alt="BE COLOR CONTEST">
+  <h1>Be Color コンテスト<small>記録証メーカー</small></h1>
   <span class="font-status" id="fontStatus">フォント読み込み中…</span>
 </header>
 
@@ -68,10 +103,10 @@
   <section>
     <div class="bulk">
       <div class="ttl">まとめて設定（入力するとすべての行に反映）</div>
-      <label style="width:90px">回数<div class="vol-wrap"><span>VOL.</span><input id="bulkVol" inputmode="numeric" placeholder="10"></div></label>
-      <label style="width:160px">日付<input id="bulkDate" type="date"></label>
-      <label style="width:130px">用紙<select id="bulkSize"><option value="">―</option><option value="a4">A4</option><option value="b5">B5</option><option value="hagaki">ハガキ</option></select></label>
-      <label style="width:80px">枚数<input id="bulkCopies" type="number" min="1" max="200" placeholder="1"></label>
+      <label>回数<div class="vol-wrap"><span>VOL.</span><input id="bulkVol" inputmode="numeric" placeholder="10"></div></label>
+      <label>日付<input id="bulkDate" type="date"></label>
+      <label>用紙<select id="bulkSize"><option value="">―</option><option value="a4">A4</option><option value="b5">B5</option><option value="hagaki">ハガキ</option></select></label>
+      <label>枚数<input id="bulkCopies" type="number" min="1" max="200" placeholder="1"></label>
     </div>
 
     <div class="toolbar">
@@ -291,8 +326,8 @@ function renderRows() {
   rowsEl.innerHTML = rows.map((r, i) => `
     <div class="row ${i === active ? "active" : ""}" data-i="${i}">
       <div class="no">${i + 1}</div>
-      <label>小タイトル<input data-k="sub" value="${esc(r.sub)}" placeholder="30秒チャレンジ！ベーシック部門"></label>
-      <label>大タイトル<input data-k="title" value="${esc(r.title)}" placeholder="優勝"></label>
+      <label class="f-wide">小タイトル<input data-k="sub" value="${esc(r.sub)}" placeholder="30秒チャレンジ！ベーシック部門"></label>
+      <label class="f-wide">大タイトル<input data-k="title" value="${esc(r.title)}" placeholder="優勝"></label>
       <label>回数<div class="vol-wrap"><span>VOL.</span><input data-k="vol" value="${esc(r.vol)}" inputmode="numeric"></div></label>
       <label>日付<input data-k="date" type="date" value="${esc(r.date)}"></label>
       <label>用紙<select data-k="size">${Object.entries(PAPERS).map(([k, p]) => `<option value="${k}" ${r.size === k ? "selected" : ""}>${p.label}</option>`).join("")}</select></label>
