@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BCC 記録証メーカー</title>
+<meta name="robots" content="noindex">
+<style>
+  @font-face { font-family: "CorporateLogoBold"; src: url("fonts/Corporate-Logo-Bold-ver3.woff2") format("woff2"); font-display: block; }
+  :root {
+    --green: #066839; --green-d: #04502b; --gold: #c9b922;
+    --bg: #f4f5f2; --card: #fff; --line: #dfe2dc; --ink: #1f2420; --sub: #6b726c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 14px; }
+  header { background: var(--green); color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+  header h1 { margin: 0; font-size: 18px; font-family: "CorporateLogoBold", sans-serif; letter-spacing: .04em; }
+  header .font-status { margin-left: auto; font-size: 12px; opacity: .85; }
+  @media (max-width: 600px) { header { flex-wrap: wrap; } header .font-status { margin-left: 0; width: 100%; } }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; padding: 12px 16px; } .preview { position: static !important; } }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .toolbar .grow { flex: 1; }
+  .bulk { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .bulk .ttl { width: 100%; font-weight: 700; font-size: 12px; color: var(--sub); }
+
+  .row { background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
+    display: grid; grid-template-columns: 28px 1.4fr 1fr 80px 140px 110px 70px; gap: 10px; align-items: end; }
+  .row.active { border-color: var(--green); }
+  .row .no { font-weight: 800; color: var(--green); font-size: 18px; align-self: center; text-align: center; }
+  .row .actions { grid-column: 2 / -1; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .row .fitnote { font-size: 11px; color: #b06a00; margin-left: auto; }
+  @media (max-width: 1180px) { .row { grid-template-columns: 28px 1fr 1fr; } .row .no { grid-row: span 4; align-self: start; } }
+
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--sub); font-weight: 600; min-width: 0; }
+  input, select { font: inherit; font-size: 15px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); width: 100%; min-width: 0; }
+  input:focus, select:focus { outline: 2px solid var(--green); outline-offset: -1px; border-color: transparent; }
+  .vol-wrap { position: relative; }
+  .vol-wrap span { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--sub); font-size: 12px; pointer-events: none; }
+  .vol-wrap input { padding-left: 36px; }
+
+  button { font: inherit; font-size: 13px; font-weight: 700; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+  button:hover { border-color: var(--green); }
+  button.primary { background: var(--green); border-color: var(--green); color: #fff; }
+  button.primary:hover { background: var(--green-d); }
+  button.small { padding: 5px 10px; font-size: 12px; }
+  button.danger { color: #b3261e; }
+  button:disabled { opacity: .45; cursor: default; }
+
+  .preview { position: sticky; top: 16px; align-self: start; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .preview h2 { margin: 0 0 8px; font-size: 13px; color: var(--sub); }
+  .preview canvas { width: 100%; height: auto; display: block; border: 1px solid var(--line); box-shadow: 0 2px 10px rgba(0,0,0,.08); background: #fff; }
+  .preview .meta { margin-top: 8px; font-size: 12px; color: var(--sub); }
+  .note { font-size: 12px; color: var(--sub); line-height: 1.7; margin-top: 16px; }
+  #progress { font-size: 12px; color: var(--green); font-weight: 700; }
+</style>
+</head>
+<body>
+<header>
+  <h1>BCC 記録証メーカー</h1>
+  <span class="font-status" id="fontStatus">フォント読み込み中…</span>
+</header>
+
+<main>
+  <section>
+    <div class="bulk">
+      <div class="ttl">まとめて設定（入力するとすべての行に反映）</div>
+      <label style="width:90px">回数<div class="vol-wrap"><span>VOL.</span><input id="bulkVol" inputmode="numeric" placeholder="10"></div></label>
+      <label style="width:160px">日付<input id="bulkDate" type="date"></label>
+      <label style="width:130px">用紙<select id="bulkSize"><option value="">―</option><option value="a4">A4</option><option value="b5">B5</option><option value="hagaki">ハガキ</option></select></label>
+      <label style="width:80px">枚数<input id="bulkCopies" type="number" min="1" max="200" placeholder="1"></label>
+    </div>
+
+    <div class="toolbar">
+      <button id="addRow">＋ 行を追加</button>
+      <span id="rowCount" style="color:var(--sub);font-size:12px"></span>
+      <span class="grow"></span>
+      <span id="progress"></span>
+      <button id="dlEach">1件ずつPDFで保存</button>
+      <button class="primary" id="dlZip">まとめてZIPで保存</button>
+    </div>
+
+    <div id="rows"></div>
+
+    <p class="note">
+      ・1行＝1つのPDFになります。「枚数」の数だけ同じページが入ります（両面ではなく、そのまま印刷すれば枚数分出ます）。<br>
+      ・タイトルが長いときは、まず文字の横幅を細くし（最大80%）、それでも入らなければ文字サイズを小さくして枠内に収めます。<br>
+      ・入力内容はこのブラウザに自動で保存されます。<br>
+      ・英数字は端末に入っている Impact を使います。Impact がない端末（スマホなど）では似た書体（Anton）で代用します。
+    </p>
+  </section>
+
+  <aside class="preview">
+    <h2 id="previewTitle">プレビュー</h2>
+    <canvas id="previewCanvas" width="400" height="566"></canvas>
+    <div class="meta" id="previewMeta"></div>
+  </aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+"use strict";
+// ===== 固定文言 =====
+const CONGRATS_TEXT = "CONGRATULATIONS.";
+const MAX_ROWS = 10;
+const OUTPUT_DPI = 300;
+
+// ===== 用紙とレイアウト（単位：pt。元デザインPDFの座標から採寸） =====
+const MM = 72 / 25.4;
+const PAPERS = {
+  a4:     { label: "A4",   w: 210 * MM, h: 297 * MM, base: "a4" },
+  b5:     { label: "B5",   w: 182 * MM, h: 257 * MM, base: "a4" },
+  hagaki: { label: "ハガキ", w: 100 * MM, h: 148 * MM, base: "hagaki" },
+};
+const BASES = {
+  a4: {
+    w: 595.276, h: 841.89, bg: "assets/bg_a4.jpg", cx: 297.6,
+    vol:   { y: 473.5, s1: 63.1, s2: 94.4, gap: 2.6 },
+    sub:   { y: 528.2, size: 38, max: 410 },
+    title: { y: 620.6, size: 90, max: 410 },
+    cong:  { y: 684.6, size: 35 },
+    date:  { y: 738.4, s1: 34, s2: 50, gap: 1.3 },
+  },
+  hagaki: {
+    w: 283.227, h: 419.963, bg: "assets/bg_hagaki.jpg", cx: 141.6,
+    vol:   { y: 248.1, s1: 28.1, s2: 42, gap: 1.1 },
+    sub:   { y: 274.6, size: 16.2, max: 200 },
+    title: { y: 317.4, size: 39.5, max: 196 },
+    cong:  { y: 351.7, size: 14.5 },
+    date:  { y: 373.9, s1: 14.1, s2: 20.7, gap: 0.5 },
+  },
+};
+const COLOR_INK = "#231f20", COLOR_GREEN = "#066839";
+const JP_FONT = "CorporateLogoBold", EN_FONT = "BCCImpact";
+
+// ===== フォント・画像の読み込み =====
+const bgImages = {};
+function loadImage(src) {
+  return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+}
+async function loadFonts() {
+  let usingImpact = true;
+  try {
+    const f = new FontFace(EN_FONT, 'local("Impact"), local("Impact Regular")');
+    document.fonts.add(await f.load());
+  } catch (e) {
+    usingImpact = false;
+    const f = new FontFace(EN_FONT, 'url("https://cdn.jsdelivr.net/npm/@fontsource/anton@5.0.8/files/anton-latin-400-normal.woff2")');
+    document.fonts.add(await f.load());
+  }
+  await document.fonts.load(`40px "${JP_FONT}"`, "優勝部門あア");
+  document.getElementById("fontStatus").textContent = usingImpact ? "フォント：Corporate Logo Bold ／ Impact" : "フォント：Corporate Logo Bold ／ Anton（Impactの代用）";
+}
+const ready = Promise.all([
+  loadFonts(),
+  ...Object.entries(BASES).map(([k, b]) => loadImage(b.bg).then(im => bgImages[k] = im)),
+]);
+
+// ===== 描画 =====
+function fitText(ctx, text, family, size, maxW) {
+  ctx.font = `${size}px "${family}"`;
+  let w = ctx.measureText(text).width, hs = 1, shrunk = false;
+  if (w > maxW) {
+    hs = Math.max(maxW / w, 0.8); shrunk = true;
+    if (w * hs > maxW) {
+      size = size * maxW / (w * hs);
+      ctx.font = `${size}px "${family}"`;
+      w = ctx.measureText(text).width;
+    }
+  }
+  return { size, w, hs, shrunk };
+}
+
+function drawGold(ctx, text, cx, y, size, maxW, px) {
+  if (!text) return false;
+  ctx.save();
+  const m = fitText(ctx, text, JP_FONT, size, maxW);
+  ctx.translate(cx, y); ctx.scale(m.hs, 1);
+  ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  const x0 = -m.w / 2;
+  const g = ctx.createLinearGradient(x0, 0, x0 + m.w, 0);
+  g.addColorStop(0, "#ab9d2b"); g.addColorStop(0.35, "#d2c321"); g.addColorStop(0.7, "#e3d61d"); g.addColorStop(1, "#ece01b");
+  // 影（shadowは端末ピクセル単位なので px を掛ける）
+  ctx.shadowColor = "rgba(40,30,25,.55)";
+  ctx.shadowOffsetX = m.size * 0.035 * px; ctx.shadowOffsetY = m.size * 0.04 * px; ctx.shadowBlur = m.size * 0.07 * px;
+  ctx.fillStyle = g; ctx.fillText(text, x0, 0);
+  ctx.restore();
+  return m.shrunk;
+}
+
+function drawVol(ctx, num, L, cx) {
+  const v = L.vol;
+  const a = "VOL.", b = String(num || "");
+  ctx.save();
+  ctx.font = `${v.s1}px "${EN_FONT}"`; const w1 = ctx.measureText(a).width;
+  ctx.font = `${v.s2}px "${EN_FONT}"`; const w2 = ctx.measureText(b).width;
+  const total = w1 + (b ? v.gap + w2 : 0);
+  const x1 = cx - total / 2, x2 = x1 + w1 + v.gap;
+  const outer = v.s2 * 0.072, inner = v.s2 * 0.034;
+  ctx.lineJoin = "miter"; ctx.miterLimit = 3; ctx.textBaseline = "alphabetic";
+  const parts = [[a, v.s1, x1]]; if (b) parts.push([b, v.s2, x2]);
+  for (const [lw, col] of [[outer, COLOR_GREEN], [inner, "#fff"]]) {
+    ctx.lineWidth = lw; ctx.strokeStyle = col;
+    for (const [t, s, x] of parts) { ctx.font = `${s}px "${EN_FONT}"`; ctx.strokeText(t, x, v.y); }
+  }
+  ctx.fillStyle = COLOR_GREEN;
+  for (const [t, s, x] of parts) { ctx.font = `${s}px "${EN_FONT}"`; ctx.fillText(t, x, v.y); }
+  ctx.restore();
+}
+
+function drawDate(ctx, iso, L, cx) {
+  if (!iso) return;
+  const [y, m, d] = iso.split("-").map(Number);
+  const a = `${y}.`, b = `${m}.${d}`, v = L.date;
+  ctx.save(); ctx.fillStyle = COLOR_INK; ctx.textBaseline = "alphabetic";
+  ctx.font = `${v.s1}px "${EN_FONT}"`; const w1 = ctx.measureText(a).width;
+  ctx.font = `${v.s2}px "${EN_FONT}"`; const w2 = ctx.measureText(b).width;
+  const x1 = cx - (w1 + v.gap + w2) / 2;
+  ctx.font = `${v.s1}px "${EN_FONT}"`; ctx.fillText(a, x1, v.y);
+  ctx.font = `${v.s2}px "${EN_FONT}"`; ctx.fillText(b, x1 + w1 + v.gap, v.y);
+  ctx.restore();
+}
+
+// data: {sub, title, vol, date, size}。canvas を返す
+function renderCert(data, dpi) {
+  const paper = PAPERS[data.size] || PAPERS.a4;
+  const L = BASES[paper.base];
+  const px = dpi / 72;
+  const W = Math.round(paper.w * px), H = Math.round(paper.h * px);
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(bgImages[paper.base], 0, 0, W, H);
+  // 基準デザイン → 実寸の倍率（B5はA4を縮小）
+  const sx = paper.w / L.w, sy = paper.h / L.h, s = Math.min(sx, sy);
+  ctx.setTransform(px * s, 0, 0, px * s, (W - L.w * s * px) / 2, (H - L.h * s * px) / 2);
+  const cx = L.cx, k = px * s;
+  drawVol(ctx, data.vol, L, cx);
+  const f1 = drawGold(ctx, data.sub, cx, L.sub.y, L.sub.size, L.sub.max, k);
+  const f2 = drawGold(ctx, data.title, cx, L.title.y, L.title.size, L.title.max, k);
+  ctx.save(); ctx.fillStyle = COLOR_INK; ctx.font = `${L.cong.size}px "${EN_FONT}"`; ctx.textAlign = "center";
+  ctx.fillText(CONGRATS_TEXT, cx, L.cong.y); ctx.restore();
+  drawDate(ctx, data.date, L, cx);
+  c.shrunk = { sub: f1, title: f2 };
+  return c;
+}
+
+// ===== PDF =====
+function makePdf(data) {
+  const paper = PAPERS[data.size] || PAPERS.a4;
+  const canvas = renderCert(data, OUTPUT_DPI);
+  const img = canvas.toDataURL("image/jpeg", 0.93);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: [paper.w, paper.h], orientation: "portrait", compress: true });
+  const n = Math.max(1, Math.min(200, parseInt(data.copies, 10) || 1));
+  for (let i = 0; i < n; i++) {
+    if (i > 0) doc.addPage([paper.w, paper.h], "portrait");
+    doc.addImage(img, "JPEG", 0, 0, paper.w, paper.h, "cert", "NONE"); // 同じ画像は1回だけ埋め込まれる
+  }
+  doc.setProperties({ title: `${data.sub} ${data.title}` });
+  return doc.output("blob");
+}
+function fileName(d, i) {
+  const clean = s => String(s || "").replace(/[\\/:*?"<>|\s!！]+/g, "_").replace(/^_+|_+$/g, "");
+  const parts = [String(i + 1).padStart(2, "0"), d.vol ? `VOL${clean(d.vol)}` : "", clean(d.sub), clean(d.title), `${PAPERS[d.size].label}x${d.copies || 1}`].filter(Boolean);
+  return parts.join("_") + ".pdf";
+}
+function saveBlob(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+// ===== 入力行 =====
+const STORE_KEY = "bcc-cert-rows-v1";
+const today = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
+let rows = [];
+let active = 0;
+try { rows = JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); } catch (e) { rows = []; }
+if (!Array.isArray(rows) || !rows.length) rows = [{ sub: "30秒チャレンジ！ベーシック部門", title: "優勝", vol: "10", date: today(), size: "a4", copies: 1 }];
+function persist() { try { localStorage.setItem(STORE_KEY, JSON.stringify(rows)); } catch (e) {} }
+
+const rowsEl = document.getElementById("rows");
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function renderRows() {
+  rowsEl.innerHTML = rows.map((r, i) => `
+    <div class="row ${i === active ? "active" : ""}" data-i="${i}">
+      <div class="no">${i + 1}</div>
+      <label>小タイトル<input data-k="sub" value="${esc(r.sub)}" placeholder="30秒チャレンジ！ベーシック部門"></label>
+      <label>大タイトル<input data-k="title" value="${esc(r.title)}" placeholder="優勝"></label>
+      <label>回数<div class="vol-wrap"><span>VOL.</span><input data-k="vol" value="${esc(r.vol)}" inputmode="numeric"></div></label>
+      <label>日付<input data-k="date" type="date" value="${esc(r.date)}"></label>
+      <label>用紙<select data-k="size">${Object.entries(PAPERS).map(([k, p]) => `<option value="${k}" ${r.size === k ? "selected" : ""}>${p.label}</option>`).join("")}</select></label>
+      <label>枚数<input data-k="copies" type="number" min="1" max="200" value="${esc(r.copies)}"></label>
+      <div class="actions">
+        <button class="small primary" data-act="pdf">PDFを保存</button>
+        <button class="small" data-act="dup" ${rows.length >= MAX_ROWS ? "disabled" : ""}>複製</button>
+        <button class="small danger" data-act="del" ${rows.length <= 1 ? "disabled" : ""}>削除</button>
+        <span class="fitnote" data-fit></span>
+      </div>
+    </div>`).join("");
+  document.getElementById("rowCount").textContent = `${rows.length} / ${MAX_ROWS} 件`;
+  document.getElementById("addRow").disabled = rows.length >= MAX_ROWS;
+  schedulePreview();
+}
+
+rowsEl.addEventListener("input", e => {
+  const el = e.target, row = el.closest(".row"); if (!row || !el.dataset.k) return;
+  const i = +row.dataset.i; rows[i][el.dataset.k] = el.value; persist(); setActive(i);
+});
+rowsEl.addEventListener("focusin", e => { const row = e.target.closest(".row"); if (row) setActive(+row.dataset.i); });
+rowsEl.addEventListener("click", async e => {
+  const row = e.target.closest(".row"); if (!row) return;
+  const i = +row.dataset.i; setActive(i);
+  const act = e.target.dataset.act; if (!act) return;
+  if (act === "del") { rows.splice(i, 1); active = Math.min(active, rows.length - 1); persist(); renderRows(); }
+  if (act === "dup" && rows.length < MAX_ROWS) { rows.splice(i + 1, 0, { ...rows[i] }); active = i + 1; persist(); renderRows(); }
+  if (act === "pdf") {
+    await ready; e.target.disabled = true; e.target.textContent = "作成中…";
+    await new Promise(r => setTimeout(r, 30));
+    saveBlob(makePdf(rows[i]), fileName(rows[i], i));
+    e.target.disabled = false; e.target.textContent = "PDFを保存";
+  }
+});
+function setActive(i) {
+  if (active !== i) {
+    active = i;
+    rowsEl.querySelectorAll(".row").forEach(r => r.classList.toggle("active", +r.dataset.i === i));
+  }
+  schedulePreview();
+}
+document.getElementById("addRow").addEventListener("click", () => {
+  if (rows.length >= MAX_ROWS) return;
+  const last = rows[rows.length - 1] || {};
+  rows.push({ sub: "", title: "", vol: last.vol || "", date: last.date || today(), size: last.size || "a4", copies: 1 });
+  active = rows.length - 1; persist(); renderRows();
+  rowsEl.querySelector(`.row[data-i="${active}"] input[data-k="sub"]`)?.focus();
+});
+
+// まとめて設定
+const bulkMap = { bulkVol: "vol", bulkDate: "date", bulkSize: "size", bulkCopies: "copies" };
+for (const [id, k] of Object.entries(bulkMap)) {
+  document.getElementById(id).addEventListener("change", e => {
+    if (e.target.value === "") return;
+    rows.forEach(r => r[k] = e.target.value); persist(); renderRows();
+  });
+}
+
+// プレビュー
+let previewTimer = null;
+function schedulePreview() { clearTimeout(previewTimer); previewTimer = setTimeout(drawPreview, 120); }
+async function drawPreview() {
+  await ready;
+  const r = rows[active]; if (!r) return;
+  const c = renderCert(r, 110);
+  const pc = document.getElementById("previewCanvas");
+  pc.width = c.width; pc.height = c.height;
+  pc.getContext("2d").drawImage(c, 0, 0);
+  document.getElementById("previewTitle").textContent = `プレビュー（${active + 1}行目）`;
+  const p = PAPERS[r.size] || PAPERS.a4;
+  document.getElementById("previewMeta").textContent = `${p.label}（${Math.round(p.w / MM)}×${Math.round(p.h / MM)}mm）・${Math.max(1, parseInt(r.copies, 10) || 1)}枚`;
+  const fit = rowsEl.querySelector(`.row[data-i="${active}"] [data-fit]`);
+  if (fit) fit.textContent = (c.shrunk.sub || c.shrunk.title) ? "※長いので文字を縮めています" : "";
+}
+
+// 一括保存
+const progressEl = document.getElementById("progress");
+async function buildAll(onEach) {
+  await ready;
+  for (let i = 0; i < rows.length; i++) {
+    progressEl.textContent = `作成中… ${i + 1} / ${rows.length}`;
+    await new Promise(r => setTimeout(r, 30));
+    await onEach(makePdf(rows[i]), fileName(rows[i], i), i);
+  }
+  progressEl.textContent = "完了しました";
+  setTimeout(() => progressEl.textContent = "", 3000);
+}
+document.getElementById("dlZip").addEventListener("click", async e => {
+  e.target.disabled = true;
+  try {
+    const zip = new JSZip();
+    await buildAll((blob, name) => zip.file(name, blob));
+    const d = rows[0]?.date ? rows[0].date.replace(/-/g, "") : today().replace(/-/g, "");
+    saveBlob(await zip.generateAsync({ type: "blob" }), `記録証_${d}.zip`);
+  } finally { e.target.disabled = false; }
+});
+document.getElementById("dlEach").addEventListener("click", async e => {
+  e.target.disabled = true;
+  try { await buildAll(async (blob, name) => { saveBlob(blob, name); await new Promise(r => setTimeout(r, 600)); }); }
+  finally { e.target.disabled = false; }
+});
+
+renderRows();
+</script>
+</body>
+</html>
